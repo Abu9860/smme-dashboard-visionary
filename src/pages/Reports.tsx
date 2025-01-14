@@ -43,6 +43,31 @@ const inventoryData = [
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
+// Chart configurations
+const chartConfig = {
+  sales: {
+    theme: {
+      light: "#8884d8",
+      dark: "#8884d8",
+    },
+    label: "Sales",
+  },
+  profit: {
+    theme: {
+      light: "#82ca9d",
+      dark: "#82ca9d",
+    },
+    label: "Profit",
+  },
+  inventory: {
+    theme: {
+      light: "#0088FE",
+      dark: "#0088FE",
+    },
+    label: "Inventory",
+  },
+};
+
 const Reports = () => {
   const [activeTab, setActiveTab] = useState("sales");
 
@@ -83,7 +108,7 @@ const Reports = () => {
               <CardTitle>Monthly Sales & Profit</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer className="h-[400px]">
+              <ChartContainer className="h-[400px]" config={chartConfig}>
                 <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -104,7 +129,7 @@ const Reports = () => {
               <CardTitle>Inventory Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer className="h-[400px]">
+              <ChartContainer className="h-[400px]" config={chartConfig}>
                 <PieChart>
                   <Pie
                     data={inventoryData}
@@ -133,7 +158,7 @@ const Reports = () => {
               <CardTitle>Sales Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <ChartContainer className="h-[400px]">
+              <ChartContainer className="h-[400px]" config={chartConfig}>
                 <LineChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
