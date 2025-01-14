@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface MetricCardProps {
   title: string;
@@ -10,6 +11,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
+  className?: string;
 }
 
 export const MetricCard = ({
@@ -18,9 +20,10 @@ export const MetricCard = ({
   description,
   icon: Icon,
   trend,
+  className,
 }: MetricCardProps) => {
   return (
-    <Card>
+    <Card className={cn("transition-all hover:scale-105", className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
@@ -32,9 +35,10 @@ export const MetricCard = ({
             {description}
             {trend && (
               <span
-                className={`ml-2 ${
+                className={cn(
+                  "ml-2",
                   trend.isPositive ? "text-green-600" : "text-red-600"
-                }`}
+                )}
               >
                 {trend.isPositive ? "+" : "-"}
                 {Math.abs(trend.value)}%
