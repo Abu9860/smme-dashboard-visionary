@@ -116,7 +116,6 @@ const Customers = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
-              prefix={<Search className="h-4 w-4 text-gray-400" />}
             />
           </div>
           <Button variant="outline">
