@@ -110,7 +110,16 @@ const Inventory = () => {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <InventoryHeader onAddItem={() => setIsAddDialogOpen(true)} />
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <InventoryHeader onAddItem={() => setIsAddDialogOpen(true)} />
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+          </DialogHeader>
+          <InventoryForm onSubmit={handleAddItem} />
+        </DialogContent>
+      </Dialog>
+
       <InventoryMetrics totalItems={items.length} lowStockItems={lowStockItems} />
 
       <div className="space-y-4">
@@ -134,15 +143,6 @@ const Inventory = () => {
 
         <StockHistoryView history={stockHistory} />
       </div>
-
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
-          </DialogHeader>
-          <InventoryForm onSubmit={handleAddItem} />
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
