@@ -11,7 +11,7 @@ export interface InventoryItem {
   imageUrl?: string;
 }
 
-export interface StockHistory {
+export interface StockHistoryRecord {
   id: number;
   itemId: number;
   date: string;

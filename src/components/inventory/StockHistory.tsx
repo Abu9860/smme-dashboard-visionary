@@ -1,13 +1,13 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
-import { StockHistory } from "@/types/inventory";
+import { StockHistoryRecord } from "@/types/inventory";
 
 interface StockHistoryProps {
-  history: StockHistory[];
+  history: StockHistoryRecord[];
 }
 
-export const StockHistory = ({ history }: StockHistoryProps) => {
+export const StockHistoryView = ({ history }: StockHistoryProps) => {
   return (
     <Card>
       <CardHeader>

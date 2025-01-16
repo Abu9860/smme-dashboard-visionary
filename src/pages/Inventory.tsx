@@ -7,15 +7,15 @@ import { InventoryMetrics } from "@/components/inventory/InventoryMetrics";
 import { InventorySearch } from "@/components/inventory/InventorySearch";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
-import { StockHistory } from "@/components/inventory/StockHistory";
-import { InventoryItem, StockHistory as StockHistoryType } from "@/types/inventory";
+import { StockHistoryView } from "@/components/inventory/StockHistory";
+import { InventoryItem, StockHistoryRecord } from "@/types/inventory";
 
 const Inventory = () => {
   const [items, setItems] = useState<InventoryItem[]>([
     {
       id: 1,
       name: "Product A",
-      category: "Electronics",
+      category: "Raw Materials",
       quantity: 50,
       price: 1000,
       status: "in-stock",
@@ -25,7 +25,7 @@ const Inventory = () => {
     {
       id: 2,
       name: "Product B",
-      category: "Accessories",
+      category: "Finished Goods",
       quantity: 5,
       price: 500,
       status: "low-stock",
@@ -34,7 +34,7 @@ const Inventory = () => {
     },
   ]);
 
-  const [stockHistory] = useState<StockHistoryType[]>([
+  const [stockHistory] = useState<StockHistoryRecord[]>([
     {
       id: 1,
       itemId: 1,
@@ -75,8 +75,21 @@ const Inventory = () => {
     toast.success("Item added successfully");
   };
 
-  const handleEditItem = (updatedItem: InventoryItem) => {
-    setItems(items.map((item) => (item.id === updatedItem.id ? updatedItem : item)));
+  const handleEditItem = (updatedItem: Omit<InventoryItem, "id" | "status">) => {
+    if (!selectedItem) return;
+
+    const status: InventoryItem["status"] = 
+      updatedItem.quantity === 0 ? "out-of-stock" :
+      updatedItem.quantity <= (updatedItem.minQuantity || 5) ? "low-stock" : 
+      "in-stock";
+
+    const editedItem: InventoryItem = {
+      ...updatedItem,
+      id: selectedItem.id,
+      status,
+    };
+
+    setItems(items.map((item) => (item.id === selectedItem.id ? editedItem : item)));
     setIsEditDialogOpen(false);
     toast.success("Item updated successfully");
   };
@@ -97,16 +110,7 @@ const Inventory = () => {
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <InventoryHeader />
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
-          </DialogHeader>
-          <InventoryForm onSubmit={handleAddItem} />
-        </DialogContent>
-      </Dialog>
-
+      <InventoryHeader onAddItem={() => setIsAddDialogOpen(true)} />
       <InventoryMetrics totalItems={items.length} lowStockItems={lowStockItems} />
 
       <div className="space-y-4">
@@ -128,8 +132,17 @@ const Inventory = () => {
           </CardContent>
         </Card>
 
-        <StockHistory history={stockHistory} />
+        <StockHistoryView history={stockHistory} />
       </div>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+          </DialogHeader>
+          <InventoryForm onSubmit={handleAddItem} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -139,7 +152,7 @@ const Inventory = () => {
           {selectedItem && (
             <InventoryForm
               item={selectedItem}
-              onSubmit={(item) => handleEditItem({ ...item, id: selectedItem.id })}
+              onSubmit={handleEditItem}
             />
           )}
         </DialogContent>
