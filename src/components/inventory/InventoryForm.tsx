@@ -3,18 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface InventoryItem {
-  id?: number;
-  name: string;
-  category: string;
-  quantity: number;
-  price: number;
-  status: "in-stock" | "low-stock" | "out-of-stock";
-  minQuantity?: number;
-  description?: string;
-  sku?: string;
-}
+import { ImagePlus } from "lucide-react";
+import { InventoryItem } from "@/types/inventory";
 
 interface InventoryFormProps {
   item?: InventoryItem;
@@ -31,7 +21,23 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
     minQuantity: item?.minQuantity || 5,
     description: item?.description || "",
     sku: item?.sku || "",
+    imageUrl: item?.imageUrl || "",
   });
+
+  const [imagePreview, setImagePreview] = useState<string | null>(item?.imageUrl || null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setImagePreview(base64String);
+        setFormData({ ...formData, imageUrl: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +46,26 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="image">Image</Label>
+        <div className="flex items-center gap-4">
+          {imagePreview ? (
+            <img src={imagePreview} alt="Preview" className="w-24 h-24 object-cover rounded-lg" />
+          ) : (
+            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
+              <ImagePlus className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+          <Input
+            id="image"
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="max-w-[200px]"
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input

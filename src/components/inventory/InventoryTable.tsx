@@ -2,15 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  quantity: number;
-  price: number;
-  status: "in-stock" | "low-stock" | "out-of-stock";
-}
+import { InventoryItem } from "@/types/inventory";
 
 interface InventoryTableProps {
   items: InventoryItem[];
@@ -34,6 +26,7 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>Image</TableHead>
           <TableHead>Name</TableHead>
           <TableHead>Category</TableHead>
           <TableHead>Quantity</TableHead>
@@ -45,6 +38,17 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>
+            <TableCell>
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="w-12 h-12 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-muted rounded-lg" />
+              )}
+            </TableCell>
             <TableCell>{item.name}</TableCell>
             <TableCell>{item.category}</TableCell>
             <TableCell>{item.quantity}</TableCell>

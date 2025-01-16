@@ -7,18 +7,8 @@ import { InventoryMetrics } from "@/components/inventory/InventoryMetrics";
 import { InventorySearch } from "@/components/inventory/InventorySearch";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
-
-interface InventoryItem {
-  id: number;
-  name: string;
-  category: string;
-  quantity: number;
-  price: number;
-  status: "in-stock" | "low-stock" | "out-of-stock";
-  minQuantity?: number;
-  description?: string;
-  sku?: string;
-}
+import { StockHistory } from "@/components/inventory/StockHistory";
+import { InventoryItem, StockHistory as StockHistoryType } from "@/types/inventory";
 
 const Inventory = () => {
   const [items, setItems] = useState<InventoryItem[]>([
@@ -41,6 +31,25 @@ const Inventory = () => {
       status: "low-stock",
       minQuantity: 10,
       sku: "PROD-B-001",
+    },
+  ]);
+
+  const [stockHistory] = useState<StockHistoryType[]>([
+    {
+      id: 1,
+      itemId: 1,
+      date: new Date().toISOString(),
+      type: "in",
+      quantity: 50,
+      notes: "Initial stock",
+    },
+    {
+      id: 2,
+      itemId: 2,
+      date: new Date().toISOString(),
+      type: "in",
+      quantity: 5,
+      notes: "Initial stock",
     },
   ]);
 
@@ -118,6 +127,8 @@ const Inventory = () => {
             />
           </CardContent>
         </Card>
+
+        <StockHistory history={stockHistory} />
       </div>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
