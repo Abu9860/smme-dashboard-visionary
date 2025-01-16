@@ -13,6 +13,21 @@ interface InventoryReportProps {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
+const chartConfig = {
+  series1: {
+    theme: {
+      light: "#0088FE",
+      dark: "#0088FE"
+    }
+  },
+  series2: {
+    theme: {
+      light: "#00C49F",
+      dark: "#00C49F"
+    }
+  }
+};
+
 export const InventoryReport = ({ data }: InventoryReportProps) => {
   return (
     <Card>
@@ -20,7 +35,7 @@ export const InventoryReport = ({ data }: InventoryReportProps) => {
         <CardTitle>Inventory Distribution</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer className="h-[300px]">
+        <ChartContainer config={chartConfig} className="h-[300px]">
           <PieChart>
             <Pie
               data={data}

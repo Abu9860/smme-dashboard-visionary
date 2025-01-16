@@ -12,6 +12,21 @@ interface SalesChartProps {
   data: SalesData[];
 }
 
+const chartConfig = {
+  sales: {
+    theme: {
+      light: "#8884d8",
+      dark: "#8884d8"
+    }
+  },
+  revenue: {
+    theme: {
+      light: "#82ca9d",
+      dark: "#82ca9d"
+    }
+  }
+};
+
 export const SalesChart = ({ data }: SalesChartProps) => {
   return (
     <Card className="col-span-2">
@@ -19,7 +34,7 @@ export const SalesChart = ({ data }: SalesChartProps) => {
         <CardTitle>Sales Overview</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer className="h-[300px]">
+        <ChartContainer config={chartConfig} className="h-[300px]">
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="date" />

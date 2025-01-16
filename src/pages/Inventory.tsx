@@ -50,11 +50,17 @@ const Inventory = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
-    const newItem = {
+    const status: InventoryItem["status"] = 
+      item.quantity === 0 ? "out-of-stock" :
+      item.quantity <= (item.minQuantity || 5) ? "low-stock" : 
+      "in-stock";
+
+    const newItem: InventoryItem = {
       ...item,
       id: items.length + 1,
-      status: item.quantity <= (item.minQuantity || 5) ? "low-stock" : "in-stock",
+      status,
     };
+    
     setItems([...items, newItem]);
     setIsAddDialogOpen(false);
     toast.success("Item added successfully");
@@ -107,8 +113,6 @@ const Inventory = () => {
               onEdit={(item) => {
                 setSelectedItem(item);
                 setIsEditDialogOpen(true);
-              }}
-              onDelete={handleDeleteItem}
             />
           </CardContent>
         </Card>
