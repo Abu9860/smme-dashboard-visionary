@@ -113,6 +113,8 @@ const Inventory = () => {
               onEdit={(item) => {
                 setSelectedItem(item);
                 setIsEditDialogOpen(true);
+              }}
+              onDelete={handleDeleteItem}
             />
           </CardContent>
         </Card>
@@ -126,7 +128,7 @@ const Inventory = () => {
           {selectedItem && (
             <InventoryForm
               item={selectedItem}
-              onSubmit={handleEditItem}
+              onSubmit={(item) => handleEditItem({ ...item, id: selectedItem.id })}
             />
           )}
         </DialogContent>
