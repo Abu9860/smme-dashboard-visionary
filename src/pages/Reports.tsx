@@ -8,9 +8,10 @@ import { SalesChart } from "@/components/reports/SalesChart";
 import { InventoryReport } from "@/components/reports/InventoryReport";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
 // Sample data - replace with real data from your backend
-const generateSalesData = (startDate: Date, endDate: Date) => {
+const generateSalesData = (startDate: Date | undefined, endDate: Date | undefined) => {
   // This is a mock function - replace with real data fetching
   return [
     { date: "Jan", sales: 4000, revenue: 240000 },
@@ -33,17 +34,11 @@ const inventoryData = [
 ];
 
 const Reports = () => {
-  const [date, setDate] = useState<{
-    from: Date | undefined;
-    to: Date | undefined;
-  }>({
-    from: undefined,
-    to: undefined,
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
 
   const salesData = generateSalesData(
-    date.from || new Date(),
-    date.to || new Date()
+    date?.from,
+    date?.to
   );
 
   const handleExport = () => {
@@ -84,7 +79,7 @@ const Reports = () => {
                 initialFocus
                 mode="range"
                 defaultMonth={date?.from}
-                selected={{ from: date?.from, to: date?.to }}
+                selected={date}
                 onSelect={setDate}
                 numberOfMonths={2}
               />
