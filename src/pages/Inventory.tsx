@@ -57,6 +57,12 @@ const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: "",
+    status: "",
+    minPrice: 0,
+    maxPrice: 0,
+  });
 
   const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
     const status: InventoryItem["status"] = 
@@ -99,14 +105,25 @@ const Inventory = () => {
     toast.success("Item deleted successfully");
   };
 
-  const filteredItems = items.filter(
-    (item) =>
+  const filteredItems = items.filter((item) => {
+    const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory = !filters.category || item.category === filters.category;
+    const matchesStatus = !filters.status || item.status === filters.status;
+    const matchesPrice =
+      (!filters.minPrice || item.price >= filters.minPrice) &&
+      (!filters.maxPrice || item.price <= filters.maxPrice);
+
+    return matchesSearch && matchesCategory && matchesStatus && matchesPrice;
+  });
 
   const lowStockItems = items.filter((item) => item.status === "low-stock").length;
+  const criticalStockItems = items.filter(
+    (item) => item.quantity <= item.minQuantity * 0.2
+  ).length;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -120,12 +137,18 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
-      <InventoryMetrics totalItems={items.length} lowStockItems={lowStockItems} />
+      <InventoryMetrics
+        totalItems={items.length}
+        lowStockItems={lowStockItems}
+        criticalStockItems={criticalStockItems}
+      />
 
       <div className="space-y-4">
         <InventorySearch
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
+          filters={filters}
+          onFiltersChange={setFilters}
         />
 
         <Card>
