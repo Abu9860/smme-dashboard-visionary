@@ -12,6 +12,7 @@ interface InvoiceFormProps {
 export const InvoiceForm = ({ onSubmit, customers }: InvoiceFormProps) => {
   const [formData, setFormData] = useState({
     customerId: "",
+    template: "standard",
     items: [{ description: "", quantity: 1, price: 0 }],
     dueDate: "",
     notes: "",
@@ -19,6 +20,10 @@ export const InvoiceForm = ({ onSubmit, customers }: InvoiceFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.customerId) {
+      toast.error("Please select a customer");
+      return;
+    }
     onSubmit(formData);
     toast.success("Invoice created successfully");
   };
@@ -44,7 +49,7 @@ export const InvoiceForm = ({ onSubmit, customers }: InvoiceFormProps) => {
           value={formData.customerId}
           onValueChange={(value) => setFormData({ ...formData, customerId: value })}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full bg-white">
             <SelectValue placeholder="Select customer" />
           </SelectTrigger>
           <SelectContent>
@@ -53,6 +58,23 @@ export const InvoiceForm = ({ onSubmit, customers }: InvoiceFormProps) => {
                 {customer.name}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Template</label>
+        <Select
+          value={formData.template}
+          onValueChange={(value) => setFormData({ ...formData, template: value })}
+        >
+          <SelectTrigger className="w-full bg-white">
+            <SelectValue placeholder="Select template" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Standard Invoice</SelectItem>
+            <SelectItem value="professional">Professional</SelectItem>
+            <SelectItem value="minimal">Minimal</SelectItem>
           </SelectContent>
         </Select>
       </div>
