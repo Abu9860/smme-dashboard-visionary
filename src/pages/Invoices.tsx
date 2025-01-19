@@ -26,7 +26,7 @@ const Invoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([
     {
       id: 1,
-      customer: "John Doe",
+      customer: "John ok Doe",
       date: "2024-02-20",
       dueDate: "2024-03-20",
       total: 2500,
