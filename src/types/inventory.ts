@@ -9,6 +9,7 @@ export interface InventoryItem {
   description?: string;
   sku?: string;
   imageUrl?: string;
+  tags?: string[];
 }
 
 export interface StockHistoryRecord {

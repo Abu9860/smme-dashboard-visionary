@@ -21,6 +21,7 @@ const Inventory = () => {
       status: "in-stock",
       minQuantity: 10,
       sku: "PROD-A-001",
+      tags: ["Bulk", "Heavy"],
     },
     {
       id: 2,
@@ -31,6 +32,7 @@ const Inventory = () => {
       status: "low-stock",
       minQuantity: 10,
       sku: "PROD-B-001",
+      tags: ["Premium", "Fragile"],
     },
   ]);
 
@@ -62,6 +64,7 @@ const Inventory = () => {
     status: "",
     minPrice: 0,
     maxPrice: 0,
+    tags: [] as string[],
   });
 
   const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
@@ -74,6 +77,7 @@ const Inventory = () => {
       ...item,
       id: items.length + 1,
       status,
+      tags: item.tags || [],
     };
     
     setItems([...items, newItem]);
@@ -93,6 +97,7 @@ const Inventory = () => {
       ...updatedItem,
       id: selectedItem.id,
       status,
+      tags: updatedItem.tags || [],
     };
 
     setItems(items.map((item) => (item.id === selectedItem.id ? editedItem : item)));
@@ -109,15 +114,19 @@ const Inventory = () => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesCategory = !filters.category || item.category === filters.category;
     const matchesStatus = !filters.status || item.status === filters.status;
     const matchesPrice =
       (!filters.minPrice || item.price >= filters.minPrice) &&
       (!filters.maxPrice || item.price <= filters.maxPrice);
+    const matchesTags = 
+      filters.tags.length === 0 || 
+      filters.tags.every(tag => item.tags?.includes(tag));
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesPrice;
+    return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesTags;
   });
 
   const lowStockItems = items.filter((item) => item.status === "low-stock").length;

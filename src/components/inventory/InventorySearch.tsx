@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 interface InventorySearchProps {
   searchTerm: string;
@@ -24,14 +25,25 @@ interface InventorySearchProps {
     status: string;
     minPrice: number;
     maxPrice: number;
+    tags: string[];
   };
   onFiltersChange: (filters: {
     category: string;
     status: string;
     minPrice: number;
     maxPrice: number;
+    tags: string[];
   }) => void;
 }
+
+const PREDEFINED_TAGS = [
+  "Seasonal",
+  "Fragile",
+  "Heavy",
+  "Perishable",
+  "Bulk",
+  "Premium",
+];
 
 export const InventorySearch = ({
   searchTerm,
@@ -45,7 +57,15 @@ export const InventorySearch = ({
       status: "",
       minPrice: 0,
       maxPrice: 0,
+      tags: [],
     });
+  };
+
+  const toggleTag = (tag: string) => {
+    const newTags = filters.tags.includes(tag)
+      ? filters.tags.filter((t) => t !== tag)
+      : [...filters.tags, tag];
+    onFiltersChange({ ...filters, tags: newTags });
   };
 
   return (
@@ -64,7 +84,7 @@ export const InventorySearch = ({
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
             Filter
-            {(filters.category || filters.status || filters.minPrice || filters.maxPrice) && (
+            {(filters.category || filters.status || filters.minPrice || filters.maxPrice || filters.tags.length > 0) && (
               <span className="ml-2 rounded-full bg-primary w-2 h-2" />
             )}
           </Button>
@@ -137,6 +157,21 @@ export const InventorySearch = ({
                     })
                   }
                 />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2">
+                {PREDEFINED_TAGS.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={filters.tags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
               </div>
             </div>
             <Button
