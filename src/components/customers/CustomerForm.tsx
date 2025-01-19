@@ -4,15 +4,20 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 interface CustomerFormProps {
+  initialData?: {
+    name: string;
+    email: string;
+    phone: string;
+  };
   onSubmit: (customer: { name: string; email: string; phone: string }) => void;
   onCancel: () => void;
 }
 
-export const CustomerForm = ({ onSubmit, onCancel }: CustomerFormProps) => {
+export const CustomerForm = ({ initialData, onSubmit, onCancel }: CustomerFormProps) => {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
+    name: initialData?.name || "",
+    email: initialData?.email || "",
+    phone: initialData?.phone || "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -22,7 +27,6 @@ export const CustomerForm = ({ onSubmit, onCancel }: CustomerFormProps) => {
       return;
     }
     onSubmit(formData);
-    toast.success("Customer added successfully");
   };
 
   return (
@@ -54,7 +58,9 @@ export const CustomerForm = ({ onSubmit, onCancel }: CustomerFormProps) => {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">Add Customer</Button>
+        <Button type="submit">
+          {initialData ? "Update Customer" : "Add Customer"}
+        </Button>
       </div>
     </form>
   );

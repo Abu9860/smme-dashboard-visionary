@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { InventoryHeader } from "@/components/inventory/InventoryHeader";
-import { InventoryMetrics } from "@/components/inventory/InventoryMetrics";
-import { InventorySearch } from "@/components/inventory/InventorySearch";
+import { Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
-import { StockHistoryView } from "@/components/inventory/StockHistory";
-import { InventoryItem, StockHistoryRecord } from "@/types/inventory";
+import { InventorySearch } from "@/components/inventory/InventorySearch";
+import { InventoryItem } from "@/types/inventory";
 
 const Inventory = () => {
   const [items, setItems] = useState<InventoryItem[]>([
@@ -21,7 +20,8 @@ const Inventory = () => {
       status: "in-stock",
       minQuantity: 10,
       sku: "PROD-A-001",
-      tags: ["Bulk", "Heavy"],
+      description: "Sample product A",
+      imageUrl: "",
     },
     {
       id: 2,
@@ -32,26 +32,8 @@ const Inventory = () => {
       status: "low-stock",
       minQuantity: 10,
       sku: "PROD-B-001",
-      tags: ["Premium", "Fragile"],
-    },
-  ]);
-
-  const [stockHistory] = useState<StockHistoryRecord[]>([
-    {
-      id: 1,
-      itemId: 1,
-      date: new Date().toISOString(),
-      type: "in",
-      quantity: 50,
-      notes: "Initial stock",
-    },
-    {
-      id: 2,
-      itemId: 2,
-      date: new Date().toISOString(),
-      type: "in",
-      quantity: 5,
-      notes: "Initial stock",
+      description: "Sample product B",
+      imageUrl: "",
     },
   ]);
 
@@ -62,9 +44,6 @@ const Inventory = () => {
   const [filters, setFilters] = useState({
     category: "all",
     status: "all",
-    minPrice: 0,
-    maxPrice: 0,
-    tags: [] as string[],
   });
 
   const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
@@ -77,7 +56,6 @@ const Inventory = () => {
       ...item,
       id: items.length + 1,
       status,
-      tags: item.tags || [],
     };
     
     setItems([...items, newItem]);
@@ -97,11 +75,11 @@ const Inventory = () => {
       ...updatedItem,
       id: selectedItem.id,
       status,
-      tags: updatedItem.tags || [],
     };
 
     setItems(items.map((item) => (item.id === selectedItem.id ? editedItem : item)));
     setIsEditDialogOpen(false);
+    setSelectedItem(null);
     toast.success("Item updated successfully");
   };
 
@@ -111,46 +89,38 @@ const Inventory = () => {
   };
 
   const filteredItems = items.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filters.category === "all" || item.category === filters.category;
     const matchesStatus = filters.status === "all" || item.status === filters.status;
-    const matchesPrice =
-      (!filters.minPrice || item.price >= filters.minPrice) &&
-      (!filters.maxPrice || item.price <= filters.maxPrice);
-    const matchesTags = 
-      filters.tags.length === 0 || 
-      filters.tags.every(tag => item.tags?.includes(tag));
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesTags;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const lowStockItems = items.filter((item) => item.status === "low-stock").length;
-  const criticalStockItems = items.filter(
-    (item) => item.quantity <= item.minQuantity * 0.2
-  ).length;
+  const outOfStockItems = items.filter((item) => item.status === "out-of-stock").length;
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <InventoryHeader onAddItem={() => setIsAddDialogOpen(true)} />
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Item</DialogTitle>
-          </DialogHeader>
-          <InventoryForm onSubmit={handleAddItem} />
-        </DialogContent>
-      </Dialog>
+      <div className="flex items-center justify-between">
+        <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
+        <Button onClick={() => setIsAddDialogOpen(true)}>Add Item</Button>
+      </div>
 
-      <InventoryMetrics
-        totalItems={items.length}
-        lowStockItems={lowStockItems}
-        criticalStockItems={criticalStockItems}
-      />
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{items.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {lowStockItems} low stock, {outOfStockItems} out of stock
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="space-y-4">
         <InventorySearch
@@ -172,9 +142,16 @@ const Inventory = () => {
             />
           </CardContent>
         </Card>
-
-        <StockHistoryView history={stockHistory} />
       </div>
+
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+          </DialogHeader>
+          <InventoryForm onSubmit={handleAddItem} />
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
@@ -194,4 +171,3 @@ const Inventory = () => {
 };
 
 export default Inventory;
-
