@@ -60,8 +60,8 @@ const Inventory = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [filters, setFilters] = useState({
-    category: "",
-    status: "",
+    category: "all",
+    status: "all",
     minPrice: 0,
     maxPrice: 0,
     tags: [] as string[],
@@ -117,8 +117,8 @@ const Inventory = () => {
       item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesCategory = !filters.category || item.category === filters.category;
-    const matchesStatus = !filters.status || item.status === filters.status;
+    const matchesCategory = filters.category === "all" || item.category === filters.category;
+    const matchesStatus = filters.status === "all" || item.status === filters.status;
     const matchesPrice =
       (!filters.minPrice || item.price >= filters.minPrice) &&
       (!filters.maxPrice || item.price <= filters.maxPrice);
@@ -194,3 +194,4 @@ const Inventory = () => {
 };
 
 export default Inventory;
+

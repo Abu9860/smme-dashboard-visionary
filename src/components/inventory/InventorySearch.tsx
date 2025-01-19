@@ -53,8 +53,8 @@ export const InventorySearch = ({
 }: InventorySearchProps) => {
   const handleClearFilters = () => {
     onFiltersChange({
-      category: "",
-      status: "",
+      category: "all",
+      status: "all",
       minPrice: 0,
       maxPrice: 0,
       tags: [],
@@ -84,7 +84,7 @@ export const InventorySearch = ({
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
             Filter
-            {(filters.category || filters.status || filters.minPrice || filters.maxPrice || filters.tags.length > 0) && (
+            {(filters.category !== "all" || filters.status !== "all" || filters.minPrice || filters.maxPrice || filters.tags.length > 0) && (
               <span className="ml-2 rounded-full bg-primary w-2 h-2" />
             )}
           </Button>
@@ -105,7 +105,7 @@ export const InventorySearch = ({
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="Raw Materials">Raw Materials</SelectItem>
                   <SelectItem value="Finished Goods">Finished Goods</SelectItem>
                   <SelectItem value="Packaging">Packaging</SelectItem>
@@ -124,7 +124,7 @@ export const InventorySearch = ({
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="in-stock">In Stock</SelectItem>
                   <SelectItem value="low-stock">Low Stock</SelectItem>
                   <SelectItem value="out-of-stock">Out of Stock</SelectItem>
