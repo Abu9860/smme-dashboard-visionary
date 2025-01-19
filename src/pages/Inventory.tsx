@@ -44,6 +44,9 @@ const Inventory = () => {
   const [filters, setFilters] = useState({
     category: "all",
     status: "all",
+    minPrice: 0,
+    maxPrice: 0,
+    tags: [] as string[],
   });
 
   const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
@@ -93,8 +96,12 @@ const Inventory = () => {
                          item.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filters.category === "all" || item.category === filters.category;
     const matchesStatus = filters.status === "all" || item.status === filters.status;
+    const matchesPrice = (!filters.minPrice || item.price >= filters.minPrice) &&
+                        (!filters.maxPrice || item.price <= filters.maxPrice);
+    const matchesTags = filters.tags.length === 0 || 
+                       (item.tags && filters.tags.every(tag => item.tags?.includes(tag)));
 
-    return matchesSearch && matchesCategory && matchesStatus;
+    return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesTags;
   });
 
   const lowStockItems = items.filter((item) => item.status === "low-stock").length;
