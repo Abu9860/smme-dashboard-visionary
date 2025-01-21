@@ -1,20 +1,12 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShoppingCart, Plus, Pencil, Trash2, FileText, Printer } from "lucide-react";
+import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-
-interface OrderItem {
-  productName: string;
-  quantity: number;
-  price: number;
-}
+import { OrderTable } from "@/components/orders/OrderTable";
+import { OrderHistory } from "@/components/orders/OrderHistory";
 
 interface Order {
   id: number;
@@ -23,9 +15,18 @@ interface Order {
   amount: number;
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   paymentStatus: "paid" | "unpaid" | "pending";
-  items: OrderItem[];
+  items: Array<{
+    productName: string;
+    quantity: number;
+    price: number;
+  }>;
   shippingAddress: string;
   shippingMethod: string;
+  history: Array<{
+    date: string;
+    status: string;
+    description: string;
+  }>;
 }
 
 const Orders = () => {
@@ -42,7 +43,14 @@ const Orders = () => {
         { productName: "Product B", quantity: 1, price: 500 }
       ],
       shippingAddress: "123 Main St, City, Country",
-      shippingMethod: "Standard Shipping"
+      shippingMethod: "Standard Shipping",
+      history: [
+        {
+          date: "2024-02-20",
+          status: "pending",
+          description: "Order placed"
+        }
+      ]
     },
   ]);
 
@@ -50,52 +58,27 @@ const Orders = () => {
     search: "",
     status: "all",
     dateRange: "all",
-    paymentStatus: "all"
   });
 
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
-  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const getStatusColor = (status: Order["status"]) => {
-    const colors = {
-      pending: "bg-yellow-100 text-yellow-800",
-      processing: "bg-blue-100 text-blue-800",
-      shipped: "bg-purple-100 text-purple-800",
-      delivered: "bg-green-100 text-green-800",
-      cancelled: "bg-red-100 text-red-800",
-    };
-    return colors[status];
+  const handleSelectOrder = (orderId: number) => {
+    setSelectedOrders(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
   };
 
-  const getPaymentStatusColor = (status: Order["paymentStatus"]) => {
-    const colors = {
-      paid: "bg-green-100 text-green-800",
-      unpaid: "bg-red-100 text-red-800",
-      pending: "bg-yellow-100 text-yellow-800",
-    };
-    return colors[status];
-  };
-
-  const handleEditOrder = (order: Order) => {
-    setEditingOrder({ ...order });
-    setIsEditDialogOpen(true);
-  };
-
-  const handleUpdateOrder = () => {
-    if (!editingOrder) return;
-    
-    setOrders(orders.map(order => 
-      order.id === editingOrder.id ? editingOrder : order
-    ));
-    
-    setIsEditDialogOpen(false);
-    setEditingOrder(null);
-    toast.success("Order updated successfully");
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedOrders(checked ? orders.map(order => order.id) : []);
   };
 
   const handleBulkAction = (action: 'ship' | 'print') => {
@@ -105,11 +88,21 @@ const Orders = () => {
     }
 
     if (action === 'ship') {
-      setOrders(orders.map(order => 
-        selectedOrders.includes(order.id) 
-          ? { ...order, status: "shipped" as const } 
-          : order
-      ));
+      setOrders(orders.map(order => {
+        if (selectedOrders.includes(order.id)) {
+          const newHistory = [...order.history, {
+            date: new Date().toISOString(),
+            status: "shipped",
+            description: "Order marked as shipped"
+          }];
+          return { 
+            ...order, 
+            status: "shipped",
+            history: newHistory
+          };
+        }
+        return order;
+      }));
       toast.success(`${selectedOrders.length} orders marked as shipped`);
     } else if (action === 'print') {
       toast.success(`Printing ${selectedOrders.length} invoices`);
@@ -118,20 +111,11 @@ const Orders = () => {
     setSelectedOrders([]);
   };
 
-  const toggleOrderSelection = (orderId: number) => {
-    setSelectedOrders(prev => 
-      prev.includes(orderId) 
-        ? prev.filter(id => id !== orderId)
-        : [...prev, orderId]
-    );
-  };
-
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       order.customerName.toLowerCase().includes(filters.search.toLowerCase()) ||
       order.id.toString().includes(filters.search);
     const matchesStatus = filters.status === "all" || order.status === filters.status;
-    const matchesPayment = filters.paymentStatus === "all" || order.paymentStatus === filters.paymentStatus;
     
     let matchesDate = true;
     const orderDate = new Date(order.orderDate);
@@ -147,7 +131,7 @@ const Orders = () => {
       matchesDate = orderDate >= monthAgo;
     }
 
-    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   return (
@@ -156,6 +140,7 @@ const Orders = () => {
         <h2 className="text-3xl font-bold tracking-tight">Orders</h2>
         <div className="flex gap-2">
           <Button onClick={() => handleBulkAction('ship')} variant="outline">
+            <Truck className="mr-2 h-4 w-4" />
             Mark as Shipped
           </Button>
           <Button onClick={() => handleBulkAction('print')} variant="outline">
@@ -169,7 +154,7 @@ const Orders = () => {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -188,84 +173,90 @@ const Orders = () => {
 
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox 
-                    checked={selectedOrders.length === filteredOrders.length}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedOrders(filteredOrders.map(order => order.id));
-                      } else {
-                        setSelectedOrders([]);
-                      }
-                    }}
-                  />
-                </TableHead>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedOrders.includes(order.id)}
-                      onCheckedChange={() => toggleOrderSelection(order.id)}
-                    />
-                  </TableCell>
-                  <TableCell>#{order.id}</TableCell>
-                  <TableCell>{order.customerName}</TableCell>
-                  <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
-                  <TableCell>₹{order.amount}</TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                      {order.paymentStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditOrder(order)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <OrderTable
+            orders={filteredOrders}
+            selectedOrders={selectedOrders}
+            onSelectOrder={handleSelectOrder}
+            onSelectAll={handleSelectAll}
+            onViewOrder={(order) => {
+              setSelectedOrder(order);
+              setIsViewDialogOpen(true);
+            }}
+            onEditOrder={(order) => {
+              setSelectedOrder(order);
+              setIsEditDialogOpen(true);
+            }}
+          />
         </CardContent>
       </Card>
+
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Order Details #{selectedOrder?.id}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Customer Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <p><strong>Name:</strong> {selectedOrder.customerName}</p>
+                    <p><strong>Shipping Address:</strong> {selectedOrder.shippingAddress}</p>
+                    <p><strong>Shipping Method:</strong> {selectedOrder.shippingMethod}</p>
+                  </CardContent>
+                </Card>
+                <OrderHistory order={selectedOrder} />
+              </div>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Order Items</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.productName}</TableCell>
+                          <TableCell>{item.quantity}</TableCell>
+                          <TableCell>₹{item.price}</TableCell>
+                          <TableCell>₹{item.quantity * item.price}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Order #{editingOrder?.id}</DialogTitle>
+            <DialogTitle>Edit Order #{selectedOrder?.id}</DialogTitle>
           </DialogHeader>
-          {editingOrder && (
+          {selectedOrder && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Customer Name</label>
                   <Input
-                    value={editingOrder.customerName}
-                    onChange={(e) => setEditingOrder({
-                      ...editingOrder,
+                    value={selectedOrder.customerName}
+                    onChange={(e) => setSelectedOrder({
+                      ...selectedOrder,
                       customerName: e.target.value
                     })}
                   />
@@ -273,9 +264,9 @@ const Orders = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Shipping Address</label>
                   <Input
-                    value={editingOrder.shippingAddress}
-                    onChange={(e) => setEditingOrder({
-                      ...editingOrder,
+                    value={selectedOrder.shippingAddress}
+                    onChange={(e) => setSelectedOrder({
+                      ...selectedOrder,
                       shippingAddress: e.target.value
                     })}
                   />
@@ -284,14 +275,14 @@ const Orders = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Items</label>
-                {editingOrder.items.map((item, index) => (
+                {selectedOrder.items.map((item, index) => (
                   <div key={index} className="flex gap-2">
                     <Input
                       value={item.productName}
                       onChange={(e) => {
-                        const newItems = [...editingOrder.items];
+                        const newItems = [...selectedOrder.items];
                         newItems[index] = { ...item, productName: e.target.value };
-                        setEditingOrder({ ...editingOrder, items: newItems });
+                        setSelectedOrder({ ...selectedOrder, items: newItems });
                       }}
                       className="flex-1"
                     />
@@ -299,9 +290,9 @@ const Orders = () => {
                       type="number"
                       value={item.quantity}
                       onChange={(e) => {
-                        const newItems = [...editingOrder.items];
+                        const newItems = [...selectedOrder.items];
                         newItems[index] = { ...item, quantity: Number(e.target.value) };
-                        setEditingOrder({ ...editingOrder, items: newItems });
+                        setSelectedOrder({ ...selectedOrder, items: newItems });
                       }}
                       className="w-24"
                     />
@@ -309,9 +300,9 @@ const Orders = () => {
                       type="number"
                       value={item.price}
                       onChange={(e) => {
-                        const newItems = [...editingOrder.items];
+                        const newItems = [...selectedOrder.items];
                         newItems[index] = { ...item, price: Number(e.target.value) };
-                        setEditingOrder({ ...editingOrder, items: newItems });
+                        setSelectedOrder({ ...selectedOrder, items: newItems });
                       }}
                       className="w-32"
                     />
@@ -323,7 +314,10 @@ const Orders = () => {
                 <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleUpdateOrder}>
+                <Button onClick={() => {
+                  // Handle save changes logic here
+                  setIsEditDialogOpen(false);
+                }}>
                   Save Changes
                 </Button>
               </div>
