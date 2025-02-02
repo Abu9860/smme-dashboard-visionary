@@ -6,6 +6,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Database } from "@/integrations/supabase/types";
 
 type Order = Database['public']['Tables']['orders']['Row'];
+type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+type PaymentStatus = "pending" | "paid" | "unpaid";
 
 interface OrderTableProps {
   orders: Order[];
@@ -15,6 +17,16 @@ interface OrderTableProps {
   onViewOrder: (order: Order) => void;
   onEditOrder: (order: Order) => void;
 }
+
+const validateOrderStatus = (status: string | null): OrderStatus => {
+  const validStatuses: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  return validStatuses.includes(status as OrderStatus) ? (status as OrderStatus) : "pending";
+};
+
+const validatePaymentStatus = (status: string | null): PaymentStatus => {
+  const validStatuses: PaymentStatus[] = ["pending", "paid", "unpaid"];
+  return validStatuses.includes(status as PaymentStatus) ? (status as PaymentStatus) : "pending";
+};
 
 export const OrderTable = ({
   orders,
@@ -57,10 +69,10 @@ export const OrderTable = ({
             <TableCell>{new Date(order.order_date || '').toLocaleDateString()}</TableCell>
             <TableCell>₹{order.amount}</TableCell>
             <TableCell>
-              <OrderStatusBadge status={order.status || 'pending'} />
+              <OrderStatusBadge status={validateOrderStatus(order.status)} />
             </TableCell>
             <TableCell>
-              <OrderStatusBadge status={order.payment_status || 'pending'} />
+              <OrderStatusBadge status={validatePaymentStatus(order.payment_status)} />
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
