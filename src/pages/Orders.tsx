@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
@@ -16,6 +17,7 @@ type Order = Database['public']['Tables']['orders']['Row'];
 const Orders = () => {
   const queryClient = useQueryClient();
   const [isAddOrderDialogOpen, setIsAddOrderDialogOpen] = useState(false);
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [newOrder, setNewOrder] = useState({
     customer_name: "",
     amount: 0,
@@ -38,6 +40,26 @@ const Orders = () => {
       }
 
       return data as Order[];
+    },
+  });
+
+  // Fetch unique customer names
+  const { data: customers = [] } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('customer_name')
+        .order('customer_name');
+
+      if (error) {
+        toast.error('Failed to fetch customers');
+        throw error;
+      }
+
+      // Get unique customer names
+      const uniqueCustomers = [...new Set(data.map(order => order.customer_name))];
+      return uniqueCustomers;
     },
   });
 
@@ -78,6 +100,7 @@ const Orders = () => {
         shipping_address: "",
         shipping_method: "Standard Shipping",
       });
+      setIsNewCustomer(false);
     },
   });
 
@@ -189,12 +212,49 @@ const Orders = () => {
           </DialogHeader>
           <form onSubmit={handleAddOrder} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Customer Name</label>
-              <Input
-                value={newOrder.customer_name}
-                onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
-                required
-              />
+              <label className="text-sm font-medium">Customer</label>
+              {!isNewCustomer ? (
+                <div className="space-y-2">
+                  <Select
+                    value={newOrder.customer_name}
+                    onValueChange={(value) => setNewOrder({ ...newOrder, customer_name: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a customer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {customers.map((customer) => (
+                        <SelectItem key={customer} value={customer}>
+                          {customer}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsNewCustomer(true)}
+                  >
+                    Add New Customer
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Input
+                    value={newOrder.customer_name}
+                    onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
+                    placeholder="Enter customer name"
+                    required
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsNewCustomer(false)}
+                  >
+                    Select Existing Customer
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Amount</label>
