@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
+import { ShoppingCart, Plus, Printer, Truck, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
 import { OrderTable } from "@/components/orders/OrderTable";
@@ -14,10 +14,19 @@ import { Database } from "@/integrations/supabase/types";
 
 type Order = Database['public']['Tables']['orders']['Row'];
 
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 const Orders = () => {
   const queryClient = useQueryClient();
   const [isAddOrderDialogOpen, setIsAddOrderDialogOpen] = useState(false);
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([
+    { name: "", quantity: 1, price: 0 }
+  ]);
   const [newOrder, setNewOrder] = useState({
     customer_name: "",
     amount: 0,
@@ -69,11 +78,14 @@ const Orders = () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
+      // Calculate total amount from items
+      const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
       const { data, error } = await supabase
         .from('orders')
         .insert({
           customer_name: orderData.customer_name,
-          amount: orderData.amount,
+          amount: totalAmount,
           shipping_address: orderData.shipping_address,
           shipping_method: orderData.shipping_method,
           status: 'pending',
@@ -100,13 +112,41 @@ const Orders = () => {
         shipping_address: "",
         shipping_method: "Standard Shipping",
       });
+      setOrderItems([{ name: "", quantity: 1, price: 0 }]);
       setIsNewCustomer(false);
     },
   });
 
   const handleAddOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newOrder.customer_name) {
+      toast.error("Please select or enter a customer name");
+      return;
+    }
+    if (orderItems.some(item => !item.name || item.quantity < 1 || item.price <= 0)) {
+      toast.error("Please fill in all item details correctly");
+      return;
+    }
     addOrderMutation.mutate(newOrder);
+  };
+
+  const addOrderItem = () => {
+    setOrderItems([...orderItems, { name: "", quantity: 1, price: 0 }]);
+  };
+
+  const removeOrderItem = (index: number) => {
+    if (orderItems.length > 1) {
+      setOrderItems(orderItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateOrderItem = (index: number, field: keyof OrderItem, value: string | number) => {
+    const newItems = [...orderItems];
+    newItems[index] = {
+      ...newItems[index],
+      [field]: value
+    };
+    setOrderItems(newItems);
   };
 
   const [filters, setFilters] = useState({
@@ -206,7 +246,7 @@ const Orders = () => {
       </div>
 
       <Dialog open={isAddOrderDialogOpen} onOpenChange={setIsAddOrderDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Add New Order</DialogTitle>
           </DialogHeader>
@@ -219,7 +259,7 @@ const Orders = () => {
                     value={newOrder.customer_name}
                     onValueChange={(value) => setNewOrder({ ...newOrder, customer_name: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a customer" />
                     </SelectTrigger>
                     <SelectContent>
@@ -256,15 +296,62 @@ const Orders = () => {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Amount</label>
-              <Input
-                type="number"
-                value={newOrder.amount}
-                onChange={(e) => setNewOrder({ ...newOrder, amount: Number(e.target.value) })}
-                required
-              />
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Order Items</label>
+                <Button type="button" variant="outline" size="sm" onClick={addOrderItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              </div>
+              
+              {orderItems.map((item, index) => (
+                <div key={index} className="grid grid-cols-12 gap-4 items-center">
+                  <div className="col-span-5">
+                    <Input
+                      placeholder="Item name"
+                      value={item.name}
+                      onChange={(e) => updateOrderItem(index, 'name', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Input
+                      type="number"
+                      min="1"
+                      placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) => updateOrderItem(index, 'quantity', parseInt(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Price"
+                      value={item.price}
+                      onChange={(e) => updateOrderItem(index, 'price', parseFloat(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Button 
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeOrderItem(index)}
+                      disabled={orderItems.length === 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Shipping Address</label>
               <Input
@@ -273,6 +360,7 @@ const Orders = () => {
                 required
               />
             </div>
+
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsAddOrderDialogOpen(false)}>
                 Cancel
@@ -282,21 +370,6 @@ const Orders = () => {
           </form>
         </DialogContent>
       </Dialog>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{orders.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {orders.filter((order) => order.status === "pending").length} pending orders
-            </p>
-          </CardContent>
-        </Card>
-      </div>
 
       <OrderFilters filters={filters} onFilterChange={handleFilterChange} />
 
