@@ -3,26 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
 import { OrderTable } from "@/components/orders/OrderTable";
-import { OrderHistory } from "@/components/orders/OrderHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Database } from "@/integrations/supabase/types";
 
-interface Order {
-  id: number;
-  customer_name: string;
-  order_date: string;
-  amount: number;
-  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  payment_status: "paid" | "unpaid" | "pending";
-  shipping_address: string;
-  shipping_method: string;
-  user_id: string;
-}
+type Order = Database['public']['Tables']['orders']['Row'];
 
 const Orders = () => {
   const queryClient = useQueryClient();
@@ -48,7 +37,7 @@ const Orders = () => {
         throw error;
       }
 
-      return data || [];
+      return data as Order[];
     },
   });
 
@@ -124,24 +113,22 @@ const Orders = () => {
     setSelectedOrders(checked ? orders.map(order => order.id) : []);
   };
 
-  const handleBulkAction = (action: 'ship' | 'print') => {
+  const handleBulkAction = async (action: 'ship' | 'print') => {
     if (selectedOrders.length === 0) {
       toast.error("Please select orders first");
       return;
     }
 
     if (action === 'ship') {
-      // Update orders status through Supabase
-      selectedOrders.forEach(async (orderId) => {
-        const { error } = await supabase
-          .from('orders')
-          .update({ status: 'shipped' })
-          .eq('id', orderId);
-        
-        if (error) {
-          toast.error(`Failed to update order ${orderId}`);
-        }
-      });
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'shipped' })
+        .in('id', selectedOrders);
+      
+      if (error) {
+        toast.error('Failed to update orders');
+        return;
+      }
       
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(`${selectedOrders.length} orders marked as shipped`);
@@ -159,7 +146,7 @@ const Orders = () => {
     const matchesStatus = filters.status === "all" || order.status === filters.status;
     
     let matchesDate = true;
-    const orderDate = new Date(order.order_date);
+    const orderDate = new Date(order.order_date || '');
     const today = new Date();
     
     if (filters.dateRange === "today") {
@@ -195,7 +182,6 @@ const Orders = () => {
         </div>
       </div>
 
-      {/* Add Order Dialog */}
       <Dialog open={isAddOrderDialogOpen} onOpenChange={setIsAddOrderDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -283,44 +269,18 @@ const Orders = () => {
               <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Customer Information</CardTitle>
+                    <CardTitle className="text-lg">Order Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <p><strong>Name:</strong> {selectedOrder.customer_name}</p>
+                    <p><strong>Customer Name:</strong> {selectedOrder.customer_name}</p>
                     <p><strong>Shipping Address:</strong> {selectedOrder.shipping_address}</p>
                     <p><strong>Shipping Method:</strong> {selectedOrder.shipping_method}</p>
+                    <p><strong>Amount:</strong> ₹{selectedOrder.amount}</p>
+                    <p><strong>Status:</strong> {selectedOrder.status}</p>
+                    <p><strong>Payment Status:</strong> {selectedOrder.payment_status}</p>
                   </CardContent>
                 </Card>
-                <OrderHistory order={selectedOrder} />
               </div>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Order Items</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedOrder.items.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{item.productName}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>₹{item.price}</TableCell>
-                          <TableCell>₹{item.quantity * item.price}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
             </div>
           )}
         </DialogContent>
@@ -347,50 +307,13 @@ const Orders = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Shipping Address</label>
                   <Input
-                    value={selectedOrder.shipping_address}
+                    value={selectedOrder.shipping_address || ''}
                     onChange={(e) => setSelectedOrder({
                       ...selectedOrder,
                       shipping_address: e.target.value
                     })}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Items</label>
-                {selectedOrder.items.map((item, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={item.productName}
-                      onChange={(e) => {
-                        const newItems = [...selectedOrder.items];
-                        newItems[index] = { ...item, productName: e.target.value };
-                        setSelectedOrder({ ...selectedOrder, items: newItems });
-                      }}
-                      className="flex-1"
-                    />
-                    <Input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => {
-                        const newItems = [...selectedOrder.items];
-                        newItems[index] = { ...item, quantity: Number(e.target.value) };
-                        setSelectedOrder({ ...selectedOrder, items: newItems });
-                      }}
-                      className="w-24"
-                    />
-                    <Input
-                      type="number"
-                      value={item.price}
-                      onChange={(e) => {
-                        const newItems = [...selectedOrder.items];
-                        newItems[index] = { ...item, price: Number(e.target.value) };
-                        setSelectedOrder({ ...selectedOrder, items: newItems });
-                      }}
-                      className="w-32"
-                    />
-                  </div>
-                ))}
               </div>
 
               <div className="flex justify-end gap-2">

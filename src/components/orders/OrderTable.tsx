@@ -3,21 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Eye, Pencil } from "lucide-react";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Database } from "@/integrations/supabase/types";
+
+type Order = Database['public']['Tables']['orders']['Row'];
 
 interface OrderTableProps {
-  orders: Array<{
-    id: number;
-    customerName: string;
-    orderDate: string;
-    amount: number;
-    status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-    paymentStatus: "paid" | "unpaid" | "pending";
-  }>;
+  orders: Order[];
   selectedOrders: number[];
   onSelectOrder: (orderId: number) => void;
   onSelectAll: (checked: boolean) => void;
-  onViewOrder: (order: any) => void;
-  onEditOrder: (order: any) => void;
+  onViewOrder: (order: Order) => void;
+  onEditOrder: (order: Order) => void;
 }
 
 export const OrderTable = ({
@@ -57,14 +53,14 @@ export const OrderTable = ({
               />
             </TableCell>
             <TableCell>#{order.id}</TableCell>
-            <TableCell>{order.customerName}</TableCell>
-            <TableCell>{new Date(order.orderDate).toLocaleDateString()}</TableCell>
+            <TableCell>{order.customer_name}</TableCell>
+            <TableCell>{new Date(order.order_date || '').toLocaleDateString()}</TableCell>
             <TableCell>₹{order.amount}</TableCell>
             <TableCell>
-              <OrderStatusBadge status={order.status} />
+              <OrderStatusBadge status={order.status || 'pending'} />
             </TableCell>
             <TableCell>
-              <OrderStatusBadge status={order.paymentStatus} />
+              <OrderStatusBadge status={order.payment_status || 'pending'} />
             </TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
