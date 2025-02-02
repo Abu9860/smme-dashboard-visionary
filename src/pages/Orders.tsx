@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
 import { OrderTable } from "@/components/orders/OrderTable";
 import { OrderHistory } from "@/components/orders/OrderHistory";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Order {
   id: number;
@@ -32,29 +33,73 @@ interface Order {
 }
 
 const Orders = () => {
-  const [orders, setOrders] = useState<Order[]>([
-    {
-      id: 1,
-      customerName: "John Doe",
-      orderDate: "2024-02-20",
-      amount: 2500,
-      status: "pending",
-      paymentStatus: "pending",
-      items: [
-        { productName: "Product A", quantity: 2, price: 1000 },
-        { productName: "Product B", quantity: 1, price: 500 }
-      ],
-      shippingAddress: "123 Main St, City, Country",
-      shippingMethod: "Standard Shipping",
-      history: [
-        {
-          date: "2024-02-20",
-          status: "pending",
-          description: "Order placed"
-        }
-      ]
+  const queryClient = useQueryClient();
+  const [isAddOrderDialogOpen, setIsAddOrderDialogOpen] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    customerName: "",
+    amount: 0,
+    shippingAddress: "",
+    shippingMethod: "Standard Shipping",
+  });
+
+  // Fetch orders
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        toast.error('Failed to fetch orders');
+        throw error;
+      }
+
+      return data || [];
     },
-  ]);
+  });
+
+  // Add order mutation
+  const addOrderMutation = useMutation({
+    mutationFn: async (orderData: typeof newOrder) => {
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([{
+          customer_name: orderData.customerName,
+          amount: orderData.amount,
+          shipping_address: orderData.shippingAddress,
+          shipping_method: orderData.shippingMethod,
+          status: 'pending',
+          payment_status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        toast.error('Failed to create order');
+        throw error;
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setIsAddOrderDialogOpen(false);
+      toast.success('Order created successfully');
+      setNewOrder({
+        customerName: "",
+        amount: 0,
+        shippingAddress: "",
+        shippingMethod: "Standard Shipping",
+      });
+    },
+  });
+
+  const handleAddOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    addOrderMutation.mutate(newOrder);
+  };
 
   const [filters, setFilters] = useState({
     search: "",
@@ -149,12 +194,54 @@ const Orders = () => {
             <Printer className="mr-2 h-4 w-4" />
             Print Invoices
           </Button>
-          <Button>
+          <Button onClick={() => setIsAddOrderDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Add Order
           </Button>
         </div>
       </div>
+
+      {/* Add Order Dialog */}
+      <Dialog open={isAddOrderDialogOpen} onOpenChange={setIsAddOrderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Order</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddOrder} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Customer Name</label>
+              <Input
+                value={newOrder.customerName}
+                onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Amount</label>
+              <Input
+                type="number"
+                value={newOrder.amount}
+                onChange={(e) => setNewOrder({ ...newOrder, amount: Number(e.target.value) })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Shipping Address</label>
+              <Input
+                value={newOrder.shippingAddress}
+                onChange={(e) => setNewOrder({ ...newOrder, shippingAddress: e.target.value })}
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsAddOrderDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Create Order</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
