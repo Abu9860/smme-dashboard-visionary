@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShoppingCart, Plus, Printer, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { OrderFilters } from "@/components/orders/OrderFilters";
@@ -13,33 +14,24 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Order {
   id: number;
-  customerName: string;
-  orderDate: string;
+  customer_name: string;
+  order_date: string;
   amount: number;
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-  paymentStatus: "paid" | "unpaid" | "pending";
-  items: Array<{
-    productName: string;
-    quantity: number;
-    price: number;
-  }>;
-  shippingAddress: string;
-  shippingMethod: string;
-  history: Array<{
-    date: string;
-    status: string;
-    description: string;
-  }>;
+  payment_status: "paid" | "unpaid" | "pending";
+  shipping_address: string;
+  shipping_method: string;
+  user_id: string;
 }
 
 const Orders = () => {
   const queryClient = useQueryClient();
   const [isAddOrderDialogOpen, setIsAddOrderDialogOpen] = useState(false);
   const [newOrder, setNewOrder] = useState({
-    customerName: "",
+    customer_name: "",
     amount: 0,
-    shippingAddress: "",
-    shippingMethod: "Standard Shipping",
+    shipping_address: "",
+    shipping_method: "Standard Shipping",
   });
 
   // Fetch orders
@@ -63,16 +55,20 @@ const Orders = () => {
   // Add order mutation
   const addOrderMutation = useMutation({
     mutationFn: async (orderData: typeof newOrder) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
       const { data, error } = await supabase
         .from('orders')
-        .insert([{
-          customer_name: orderData.customerName,
+        .insert({
+          customer_name: orderData.customer_name,
           amount: orderData.amount,
-          shipping_address: orderData.shippingAddress,
-          shipping_method: orderData.shippingMethod,
+          shipping_address: orderData.shipping_address,
+          shipping_method: orderData.shipping_method,
           status: 'pending',
-          payment_status: 'pending'
-        }])
+          payment_status: 'pending',
+          user_id: userData.user.id
+        })
         .select()
         .single();
 
@@ -88,10 +84,10 @@ const Orders = () => {
       setIsAddOrderDialogOpen(false);
       toast.success('Order created successfully');
       setNewOrder({
-        customerName: "",
+        customer_name: "",
         amount: 0,
-        shippingAddress: "",
-        shippingMethod: "Standard Shipping",
+        shipping_address: "",
+        shipping_method: "Standard Shipping",
       });
     },
   });
@@ -135,21 +131,19 @@ const Orders = () => {
     }
 
     if (action === 'ship') {
-      setOrders(orders.map(order => {
-        if (selectedOrders.includes(order.id)) {
-          const newHistory = [...order.history, {
-            date: new Date().toISOString(),
-            status: "shipped",
-            description: "Order marked as shipped"
-          }];
-          return { 
-            ...order, 
-            status: "shipped",
-            history: newHistory
-          };
+      // Update orders status through Supabase
+      selectedOrders.forEach(async (orderId) => {
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: 'shipped' })
+          .eq('id', orderId);
+        
+        if (error) {
+          toast.error(`Failed to update order ${orderId}`);
         }
-        return order;
-      }));
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success(`${selectedOrders.length} orders marked as shipped`);
     } else if (action === 'print') {
       toast.success(`Printing ${selectedOrders.length} invoices`);
@@ -160,12 +154,12 @@ const Orders = () => {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.customerName.toLowerCase().includes(filters.search.toLowerCase()) ||
+      order.customer_name.toLowerCase().includes(filters.search.toLowerCase()) ||
       order.id.toString().includes(filters.search);
     const matchesStatus = filters.status === "all" || order.status === filters.status;
     
     let matchesDate = true;
-    const orderDate = new Date(order.orderDate);
+    const orderDate = new Date(order.order_date);
     const today = new Date();
     
     if (filters.dateRange === "today") {
@@ -211,8 +205,8 @@ const Orders = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Customer Name</label>
               <Input
-                value={newOrder.customerName}
-                onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })}
+                value={newOrder.customer_name}
+                onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
                 required
               />
             </div>
@@ -228,8 +222,8 @@ const Orders = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Shipping Address</label>
               <Input
-                value={newOrder.shippingAddress}
-                onChange={(e) => setNewOrder({ ...newOrder, shippingAddress: e.target.value })}
+                value={newOrder.shipping_address}
+                onChange={(e) => setNewOrder({ ...newOrder, shipping_address: e.target.value })}
                 required
               />
             </div>
@@ -292,9 +286,9 @@ const Orders = () => {
                     <CardTitle className="text-lg">Customer Information</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <p><strong>Name:</strong> {selectedOrder.customerName}</p>
-                    <p><strong>Shipping Address:</strong> {selectedOrder.shippingAddress}</p>
-                    <p><strong>Shipping Method:</strong> {selectedOrder.shippingMethod}</p>
+                    <p><strong>Name:</strong> {selectedOrder.customer_name}</p>
+                    <p><strong>Shipping Address:</strong> {selectedOrder.shipping_address}</p>
+                    <p><strong>Shipping Method:</strong> {selectedOrder.shipping_method}</p>
                   </CardContent>
                 </Card>
                 <OrderHistory order={selectedOrder} />
@@ -343,20 +337,20 @@ const Orders = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Customer Name</label>
                   <Input
-                    value={selectedOrder.customerName}
+                    value={selectedOrder.customer_name}
                     onChange={(e) => setSelectedOrder({
                       ...selectedOrder,
-                      customerName: e.target.value
+                      customer_name: e.target.value
                     })}
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Shipping Address</label>
                   <Input
-                    value={selectedOrder.shippingAddress}
+                    value={selectedOrder.shipping_address}
                     onChange={(e) => setSelectedOrder({
                       ...selectedOrder,
-                      shippingAddress: e.target.value
+                      shipping_address: e.target.value
                     })}
                   />
                 </div>
