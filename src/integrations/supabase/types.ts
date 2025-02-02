@@ -9,13 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      order_history: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: number
+          order_id: number | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          order_id?: number | null
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          order_id?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_name: string
+          id: number
+          order_date: string | null
+          payment_status: string | null
+          shipping_address: string | null
+          shipping_method: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_name: string
+          id?: number
+          order_date?: string | null
+          payment_status?: string | null
+          shipping_address?: string | null
+          shipping_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_name?: string
+          id?: number
+          order_date?: string | null
+          payment_status?: string | null
+          shipping_address?: string | null
+          shipping_method?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      insert_demo_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
