@@ -40,15 +40,18 @@ const Inventory = () => {
         throw error;
       }
 
-      return data;
+      return data as InventoryItem[];
     },
   });
 
   const addItemMutation = useMutation({
-    mutationFn: async (item: Omit<InventoryItem, "id" | "status">) => {
+    mutationFn: async (item: Omit<InventoryItem, "id">) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+
       const { data, error } = await supabase
         .from('inventory_items')
-        .insert([item])
+        .insert([{ ...item, user_id: userData.user.id }])
         .select()
         .single();
 
@@ -106,22 +109,28 @@ const Inventory = () => {
     },
   });
 
-  const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
-    addItemMutation.mutate(item);
+  const handleAddItem = (formData: Omit<InventoryItem, "id" | "user_id" | "status">) => {
+    const status: InventoryItem["status"] = 
+      formData.quantity === 0 ? "out-of-stock" :
+      formData.quantity <= (formData.minQuantity || 5) ? "low-stock" : 
+      "in-stock";
+
+    addItemMutation.mutate({ ...formData, status });
   };
 
-  const handleEditItem = (updatedItem: Omit<InventoryItem, "id" | "status">) => {
+  const handleEditItem = (formData: Omit<InventoryItem, "id" | "status" | "user_id">) => {
     if (!selectedItem) return;
 
     const status: InventoryItem["status"] = 
-      updatedItem.quantity === 0 ? "out-of-stock" :
-      updatedItem.quantity <= (updatedItem.minQuantity || 5) ? "low-stock" : 
+      formData.quantity === 0 ? "out-of-stock" :
+      formData.quantity <= (formData.minQuantity || 5) ? "low-stock" : 
       "in-stock";
 
     updateItemMutation.mutate({
-      ...updatedItem,
+      ...formData,
       id: selectedItem.id,
       status,
+      user_id: selectedItem.user_id,
     });
   };
 
@@ -184,7 +193,8 @@ const Inventory = () => {
           <CardContent>
             <div className="text-2xl font-bold">{items.length}</div>
             <p className="text-xs text-muted-foreground">
-              {lowStockItems} low stock, {outOfStockItems} out of stock
+              {items.filter((item) => item.status === "low-stock").length} low stock,{" "}
+              {items.filter((item) => item.status === "out-of-stock").length} out of stock
             </p>
           </CardContent>
         </Card>
@@ -201,7 +211,7 @@ const Inventory = () => {
         <Card>
           <CardContent className="p-0">
             <InventoryTable
-              items={filteredItems}
+              items={items}
               selectedItems={selectedItems}
               onSelectItem={handleSelectItem}
               onSelectAll={handleSelectAll}

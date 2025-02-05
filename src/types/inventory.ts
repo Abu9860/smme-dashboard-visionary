@@ -1,7 +1,7 @@
 export interface InventoryItem {
   id: number;
   name: string;
-  category: string;
+  category: string | null;
   quantity: number;
   price: number;
   status: "in-stock" | "low-stock" | "out-of-stock";
@@ -10,6 +10,9 @@ export interface InventoryItem {
   sku?: string;
   imageUrl?: string;
   tags?: string[];
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface StockHistoryRecord {
