@@ -118,7 +118,7 @@ const Inventory = () => {
   const handleAddItem = (formData: Omit<InventoryItem, "id" | "user_id">) => {
     const status: InventoryItem["status"] = 
       formData.quantity === 0 ? "out-of-stock" :
-      formData.quantity <= (formData.minQuantity || 5) ? "low-stock" : 
+      formData.quantity <= (formData.min_quantity || 5) ? "low-stock" : 
       "in-stock";
 
     addItemMutation.mutate({ ...formData, status });
@@ -129,7 +129,7 @@ const Inventory = () => {
 
     const status: InventoryItem["status"] = 
       formData.quantity === 0 ? "out-of-stock" :
-      formData.quantity <= (formData.minQuantity || 5) ? "low-stock" : 
+      formData.quantity <= (formData.min_quantity || 5) ? "low-stock" : 
       "in-stock";
 
     updateItemMutation.mutate({
