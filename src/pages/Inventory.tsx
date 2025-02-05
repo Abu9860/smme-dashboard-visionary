@@ -49,11 +49,8 @@ const Inventory = () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
-      // Convert form data to match database schema
       const itemData = {
         ...formData,
-        min_quantity: formData.minQuantity,
-        image_url: formData.imageUrl,
         user_id: userData.user.id,
       };
 

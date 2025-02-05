@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ImagePlus } from "lucide-react";
+import { useState } from "react";
 import { InventoryItem } from "@/types/inventory";
 
 interface InventoryFormProps {
   item?: InventoryItem;
-  onSubmit: (item: Omit<InventoryItem, "id" | "user_id">) => void;
+  onSubmit: (formData: Omit<InventoryItem, "id" | "user_id">) => void;
 }
 
 export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
@@ -18,13 +18,14 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
     quantity: item?.quantity || 0,
     price: item?.price || 0,
     status: item?.status || "in-stock",
-    min_quantity: item?.minQuantity || 5,
+    min_quantity: item?.min_quantity || 5,
     description: item?.description || "",
     sku: item?.sku || "",
-    image_url: item?.imageUrl || "",
+    image_url: item?.image_url || "",
+    tags: item?.tags || [],
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(item?.imageUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(item?.image_url || null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,35 +42,11 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
-      ...formData,
-      minQuantity: formData.min_quantity,
-      imageUrl: formData.image_url,
-    });
+    onSubmit(formData);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="image">Image</Label>
-        <div className="flex items-center gap-4">
-          {imagePreview ? (
-            <img src={imagePreview} alt="Preview" className="w-24 h-24 object-cover rounded-lg" />
-          ) : (
-            <div className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center">
-              <ImagePlus className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-          <Input
-            id="image"
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="max-w-[200px]"
-          />
-        </div>
-      </div>
-
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
@@ -79,32 +56,14 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
           required
         />
       </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="sku">SKU</Label>
-        <Input
-          id="sku"
-          value={formData.sku}
-          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-          required
-        />
-      </div>
 
       <div className="space-y-2">
         <Label htmlFor="category">Category</Label>
-        <Select
+        <Input
+          id="category"
           value={formData.category}
-          onValueChange={(value) => setFormData({ ...formData, category: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Raw Materials">Raw Materials</SelectItem>
-            <SelectItem value="Finished Goods">Finished Goods</SelectItem>
-            <SelectItem value="Packaging">Packaging</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -118,42 +77,90 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
             required
           />
         </div>
-        
+
         <div className="space-y-2">
-          <Label htmlFor="min_quantity">Min Quantity</Label>
+          <Label htmlFor="price">Price</Label>
           <Input
-            id="min_quantity"
+            id="price"
             type="number"
-            value={formData.min_quantity}
-            onChange={(e) => setFormData({ ...formData, min_quantity: Number(e.target.value) })}
+            step="0.01"
+            value={formData.price}
+            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
             required
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="price">Price</Label>
+        <Label htmlFor="status">Status</Label>
+        <Select
+          value={formData.status}
+          onValueChange={(value: "in-stock" | "low-stock" | "out-of-stock") =>
+            setFormData({ ...formData, status: value })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="in-stock">In Stock</SelectItem>
+            <SelectItem value="low-stock">Low Stock</SelectItem>
+            <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="min_quantity">Min Quantity</Label>
         <Input
-          id="price"
+          id="min_quantity"
           type="number"
-          value={formData.price}
-          onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+          value={formData.min_quantity}
+          onChange={(e) => setFormData({ ...formData, min_quantity: Number(e.target.value) })}
           required
         />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Input
+        <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
         />
       </div>
 
-      <Button type="submit" className="w-full">
-        {item ? "Update Item" : "Add Item"}
-      </Button>
+      <div className="space-y-2">
+        <Label htmlFor="sku">SKU</Label>
+        <Input
+          id="sku"
+          value={formData.sku}
+          onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="image">Image</Label>
+        <Input
+          id="image"
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+        />
+        {imagePreview && (
+          <img
+            src={imagePreview}
+            alt="Preview"
+            className="mt-2 max-w-xs rounded-lg border"
+          />
+        )}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button type="submit">
+          {item ? "Update Item" : "Add Item"}
+        </Button>
+      </div>
     </form>
   );
 };
