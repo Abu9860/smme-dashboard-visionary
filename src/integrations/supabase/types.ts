@@ -9,6 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      inventory_items: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: number
+          image_url: string | null
+          min_quantity: number | null
+          name: string
+          price: number
+          quantity: number
+          sku: string | null
+          status: string | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          min_quantity?: number | null
+          name: string
+          price?: number
+          quantity?: number
+          sku?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          min_quantity?: number | null
+          name?: string
+          price?: number
+          quantity?: number
+          sku?: string | null
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       order_history: {
         Row: {
           created_at: string | null
