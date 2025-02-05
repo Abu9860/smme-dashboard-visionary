@@ -1,17 +1,27 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { InventoryItem } from "@/types/inventory";
 
 interface InventoryTableProps {
   items: InventoryItem[];
-  onEdit: (item: InventoryItem) => void;
-  onDelete: (id: number) => void;
+  selectedItems?: number[];
+  onSelectItem?: (itemId: number) => void;
+  onSelectAll?: (checked: boolean) => void;
+  onEdit?: (item: InventoryItem) => void;
+  onDelete?: (id: number) => void;
 }
 
-export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps) => {
-  const getStatusColor = (status: InventoryItem["status"]) => {
+export const InventoryTable = ({
+  items,
+  selectedItems = [],
+  onSelectItem,
+  onSelectAll,
+  onEdit,
+  onDelete,
+}: InventoryTableProps) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "in-stock":
         return "bg-green-100 text-green-800";
@@ -19,6 +29,8 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
         return "bg-yellow-100 text-yellow-800";
       case "out-of-stock":
         return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -26,7 +38,15 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Image</TableHead>
+          {onSelectItem && (
+            <TableHead className="w-12">
+              <Checkbox
+                checked={items.length > 0 && selectedItems.length === items.length}
+                onCheckedChange={(checked) => onSelectAll?.(!!checked)}
+                aria-label="Select all items"
+              />
+            </TableHead>
+          )}
           <TableHead>Name</TableHead>
           <TableHead>Category</TableHead>
           <TableHead>Quantity</TableHead>
@@ -38,17 +58,15 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>
-            <TableCell>
-              {item.imageUrl ? (
-                <img
-                  src={item.imageUrl}
-                  alt={item.name}
-                  className="w-12 h-12 object-cover rounded-lg"
+            {onSelectItem && (
+              <TableCell>
+                <Checkbox
+                  checked={selectedItems.includes(item.id)}
+                  onCheckedChange={() => onSelectItem(item.id)}
+                  aria-label={`Select ${item.name}`}
                 />
-              ) : (
-                <div className="w-12 h-12 bg-muted rounded-lg" />
-              )}
-            </TableCell>
+              </TableCell>
+            )}
             <TableCell>{item.name}</TableCell>
             <TableCell>{item.category}</TableCell>
             <TableCell>{item.quantity}</TableCell>
@@ -62,17 +80,17 @@ export const InventoryTable = ({ items, onEdit, onDelete }: InventoryTableProps)
               <div className="flex justify-end gap-2">
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(item)}
+                  size="sm"
+                  onClick={() => onEdit?.(item)}
                 >
-                  <Pencil className="h-4 w-4" />
+                  Edit
                 </Button>
                 <Button
                   variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(item.id)}
+                  size="sm"
+                  onClick={() => onDelete?.(item.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  Delete
                 </Button>
               </div>
             </TableCell>

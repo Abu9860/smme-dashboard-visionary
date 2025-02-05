@@ -8,35 +8,12 @@ import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { InventorySearch } from "@/components/inventory/InventorySearch";
 import { InventoryItem } from "@/types/inventory";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Inventory = () => {
-  const [items, setItems] = useState<InventoryItem[]>([
-    {
-      id: 1,
-      name: "Product A",
-      category: "Raw Materials",
-      quantity: 50,
-      price: 1000,
-      status: "in-stock",
-      minQuantity: 10,
-      sku: "PROD-A-001",
-      description: "Sample product A",
-      imageUrl: "",
-    },
-    {
-      id: 2,
-      name: "Product B",
-      category: "Finished Goods",
-      quantity: 5,
-      price: 500,
-      status: "low-stock",
-      minQuantity: 10,
-      sku: "PROD-B-001",
-      description: "Sample product B",
-      imageUrl: "",
-    },
-  ]);
-
+  const queryClient = useQueryClient();
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -49,21 +26,88 @@ const Inventory = () => {
     tags: [] as string[],
   });
 
-  const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
-    const status: InventoryItem["status"] = 
-      item.quantity === 0 ? "out-of-stock" :
-      item.quantity <= (item.minQuantity || 5) ? "low-stock" : 
-      "in-stock";
+  // Fetch inventory items
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .order('name');
 
-    const newItem: InventoryItem = {
-      ...item,
-      id: items.length + 1,
-      status,
-    };
-    
-    setItems([...items, newItem]);
-    setIsAddDialogOpen(false);
-    toast.success("Item added successfully");
+      if (error) {
+        toast.error('Failed to fetch inventory items');
+        throw error;
+      }
+
+      return data;
+    },
+  });
+
+  const addItemMutation = useMutation({
+    mutationFn: async (item: Omit<InventoryItem, "id" | "status">) => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert([item])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setIsAddDialogOpen(false);
+      toast.success("Item added successfully");
+    },
+    onError: () => {
+      toast.error("Failed to add item");
+    },
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: async (item: InventoryItem) => {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .update(item)
+        .eq('id', item.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      setIsEditDialogOpen(false);
+      setSelectedItem(null);
+      toast.success("Item updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update item");
+    },
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success("Item deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete item");
+    },
+  });
+
+  const handleAddItem = (item: Omit<InventoryItem, "id" | "status">) => {
+    addItemMutation.mutate(item);
   };
 
   const handleEditItem = (updatedItem: Omit<InventoryItem, "id" | "status">) => {
@@ -74,26 +118,32 @@ const Inventory = () => {
       updatedItem.quantity <= (updatedItem.minQuantity || 5) ? "low-stock" : 
       "in-stock";
 
-    const editedItem: InventoryItem = {
+    updateItemMutation.mutate({
       ...updatedItem,
       id: selectedItem.id,
       status,
-    };
-
-    setItems(items.map((item) => (item.id === selectedItem.id ? editedItem : item)));
-    setIsEditDialogOpen(false);
-    setSelectedItem(null);
-    toast.success("Item updated successfully");
+    });
   };
 
   const handleDeleteItem = (id: number) => {
-    setItems(items.filter((item) => item.id !== id));
-    toast.success("Item deleted successfully");
+    deleteItemMutation.mutate(id);
+  };
+
+  const handleSelectItem = (itemId: number) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    setSelectedItems(checked ? items.map(item => item.id) : []);
   };
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+                         (item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesCategory = filters.category === "all" || item.category === filters.category;
     const matchesStatus = filters.status === "all" || item.status === filters.status;
     const matchesPrice = (!filters.minPrice || item.price >= filters.minPrice) &&
@@ -107,11 +157,22 @@ const Inventory = () => {
   const lowStockItems = items.filter((item) => item.status === "low-stock").length;
   const outOfStockItems = items.filter((item) => item.status === "out-of-stock").length;
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold tracking-tight">Inventory</h2>
-        <Button onClick={() => setIsAddDialogOpen(true)}>Add Item</Button>
+        <div className="flex gap-2">
+          {selectedItems.length > 0 && (
+            <Button onClick={() => setSelectedItems([])}>
+              Clear Selection ({selectedItems.length})
+            </Button>
+          )}
+          <Button onClick={() => setIsAddDialogOpen(true)}>Add Item</Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -141,6 +202,9 @@ const Inventory = () => {
           <CardContent className="p-0">
             <InventoryTable
               items={filteredItems}
+              selectedItems={selectedItems}
+              onSelectItem={handleSelectItem}
+              onSelectAll={handleSelectAll}
               onEdit={(item) => {
                 setSelectedItem(item);
                 setIsEditDialogOpen(true);
