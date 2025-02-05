@@ -46,12 +46,16 @@ const Inventory = () => {
 
   const addItemMutation = useMutation({
     mutationFn: async (formData: Omit<InventoryItem, "id" | "user_id">) => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
+
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
 
       const itemData = {
         ...formData,
-        user_id: userData.user.id,
+        user_id: user.id,
       };
 
       const { data, error } = await supabase
@@ -60,7 +64,10 @@ const Inventory = () => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding item:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {
