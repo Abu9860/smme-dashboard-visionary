@@ -49,9 +49,17 @@ const Inventory = () => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
+      // Convert form data to match database schema
+      const itemData = {
+        ...formData,
+        min_quantity: formData.minQuantity,
+        image_url: formData.imageUrl,
+        user_id: userData.user.id,
+      };
+
       const { data, error } = await supabase
         .from('inventory_items')
-        .insert([{ ...formData, user_id: userData.user.id }])
+        .insert([itemData])
         .select()
         .single();
 
@@ -63,7 +71,8 @@ const Inventory = () => {
       setIsAddDialogOpen(false);
       toast.success("Item added successfully");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error adding item:', error);
       toast.error("Failed to add item");
     },
   });

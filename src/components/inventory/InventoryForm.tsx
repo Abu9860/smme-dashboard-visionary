@@ -18,10 +18,10 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
     quantity: item?.quantity || 0,
     price: item?.price || 0,
     status: item?.status || "in-stock",
-    minQuantity: item?.minQuantity || 5,
+    min_quantity: item?.minQuantity || 5,
     description: item?.description || "",
     sku: item?.sku || "",
-    imageUrl: item?.imageUrl || "",
+    image_url: item?.imageUrl || "",
   });
 
   const [imagePreview, setImagePreview] = useState<string | null>(item?.imageUrl || null);
@@ -33,7 +33,7 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
       reader.onloadend = () => {
         const base64String = reader.result as string;
         setImagePreview(base64String);
-        setFormData({ ...formData, imageUrl: base64String });
+        setFormData({ ...formData, image_url: base64String });
       };
       reader.readAsDataURL(file);
     }
@@ -41,7 +41,11 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      ...formData,
+      minQuantity: formData.min_quantity,
+      imageUrl: formData.image_url,
+    });
   };
 
   return (
@@ -116,12 +120,12 @@ export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="minQuantity">Min Quantity</Label>
+          <Label htmlFor="min_quantity">Min Quantity</Label>
           <Input
-            id="minQuantity"
+            id="min_quantity"
             type="number"
-            value={formData.minQuantity}
-            onChange={(e) => setFormData({ ...formData, minQuantity: Number(e.target.value) })}
+            value={formData.min_quantity}
+            onChange={(e) => setFormData({ ...formData, min_quantity: Number(e.target.value) })}
             required
           />
         </div>
