@@ -45,13 +45,13 @@ const Inventory = () => {
   });
 
   const addItemMutation = useMutation({
-    mutationFn: async (item: Omit<InventoryItem, "id">) => {
+    mutationFn: async (formData: Omit<InventoryItem, "id" | "user_id">) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError) throw userError;
 
       const { data, error } = await supabase
         .from('inventory_items')
-        .insert([{ ...item, user_id: userData.user.id }])
+        .insert([{ ...formData, user_id: userData.user.id }])
         .select()
         .single();
 
@@ -109,7 +109,7 @@ const Inventory = () => {
     },
   });
 
-  const handleAddItem = (formData: Omit<InventoryItem, "id" | "user_id" | "status">) => {
+  const handleAddItem = (formData: Omit<InventoryItem, "id" | "user_id">) => {
     const status: InventoryItem["status"] = 
       formData.quantity === 0 ? "out-of-stock" :
       formData.quantity <= (formData.minQuantity || 5) ? "low-stock" : 
@@ -118,7 +118,7 @@ const Inventory = () => {
     addItemMutation.mutate({ ...formData, status });
   };
 
-  const handleEditItem = (formData: Omit<InventoryItem, "id" | "status" | "user_id">) => {
+  const handleEditItem = (formData: Omit<InventoryItem, "id" | "user_id">) => {
     if (!selectedItem) return;
 
     const status: InventoryItem["status"] = 

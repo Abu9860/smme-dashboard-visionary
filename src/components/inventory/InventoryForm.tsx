@@ -8,7 +8,7 @@ import { InventoryItem } from "@/types/inventory";
 
 interface InventoryFormProps {
   item?: InventoryItem;
-  onSubmit: (item: Omit<InventoryItem, "id">) => void;
+  onSubmit: (item: Omit<InventoryItem, "id" | "user_id">) => void;
 }
 
 export const InventoryForm = ({ item, onSubmit }: InventoryFormProps) => {
