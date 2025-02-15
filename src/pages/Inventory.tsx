@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -10,8 +10,10 @@ import { InventorySearch } from "@/components/inventory/InventorySearch";
 import { InventoryItem } from "@/types/inventory";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Inventory = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,7 +28,17 @@ const Inventory = () => {
     tags: [] as string[],
   });
 
-  // Fetch inventory items
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session) {
+        toast.error("Please sign in to access inventory");
+        navigate("/"); // Redirect to home or login page
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['inventory'],
     queryFn: async () => {
@@ -46,16 +58,14 @@ const Inventory = () => {
 
   const addItemMutation = useMutation({
     mutationFn: async (formData: Omit<InventoryItem, "id" | "user_id">) => {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-
-      if (!user) {
-        throw new Error('User not authenticated');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Please sign in to add items');
       }
 
       const itemData = {
         ...formData,
-        user_id: user.id,
+        user_id: session.user.id,
       };
 
       const { data, error } = await supabase
@@ -77,7 +87,7 @@ const Inventory = () => {
     },
     onError: (error) => {
       console.error('Error adding item:', error);
-      toast.error("Failed to add item");
+      toast.error(error instanceof Error ? error.message : "Failed to add item");
     },
   });
 
@@ -176,9 +186,6 @@ const Inventory = () => {
     return matchesSearch && matchesCategory && matchesStatus && matchesPrice && matchesTags;
   });
 
-  const lowStockItems = items.filter((item) => item.status === "low-stock").length;
-  const outOfStockItems = items.filter((item) => item.status === "out-of-stock").length;
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -224,7 +231,7 @@ const Inventory = () => {
         <Card>
           <CardContent className="p-0">
             <InventoryTable
-              items={items}
+              items={filteredItems}
               selectedItems={selectedItems}
               onSelectItem={handleSelectItem}
               onSelectAll={handleSelectAll}
